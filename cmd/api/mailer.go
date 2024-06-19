@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	"text/template"
+	"html/template"
 	"time"
 
 	"github.com/vanng822/go-premailer/premailer"
@@ -21,18 +21,18 @@ type Mail struct {
 }
 
 type Message struct {
-	From       string
-	FromName   string
-	To         string
-	Subject    string
-	Attachment []string
-	Data       any
-	DataMap    map[string]any
+	From        string
+	FromName    string
+	To          string
+	Subject     string
+	Attachments []string
+	Data        any
+	DataMap     map[string]any
 }
 
 func (m *Mail) SendSMTPMessage(msg Message) error {
 	if msg.From == "" {
-		msg.FromName = m.FromAddress
+		msg.From = m.FromAddress
 	}
 
 	if msg.FromName == "" {
@@ -47,7 +47,7 @@ func (m *Mail) SendSMTPMessage(msg Message) error {
 
 	formattedMessage, err := m.buildHTMLMessage(msg)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	plainMessage, err := m.buildPlainTextMessage(msg)
@@ -59,7 +59,8 @@ func (m *Mail) SendSMTPMessage(msg Message) error {
 	server.Host = m.Host
 	server.Port = m.Port
 	server.Username = m.Username
-	server.Password = m.getEncryption(m.Encryption)
+	server.Password = m.Password
+	server.Encryption = m.getEncryption(m.Encryption)
 	server.KeepAlive = false
 	server.ConnectTimeout = 10 * time.Second
 	server.SendTimeout = 10 * time.Second
@@ -77,11 +78,12 @@ func (m *Mail) SendSMTPMessage(msg Message) error {
 	email.SetBody(mail.TextPlain, plainMessage)
 	email.AddAlternative(mail.TextHTML, formattedMessage)
 
-	if len(msg.Attachment) > 0 {
-		for _, x := range msg.Attachment {
+	if len(msg.Attachments) > 0 {
+		for _, x := range msg.Attachments {
 			email.AddAttachment(x)
 		}
 	}
+
 	err = email.Send(smtpClient)
 	if err != nil {
 		return err
